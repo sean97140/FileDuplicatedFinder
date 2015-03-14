@@ -35,6 +35,7 @@ namespace RecursiveSearchCS
         private Button Browse;
         private Button deleteBtn;
         long totalSize;
+        private Button undoBtn;
         BinaryTree bst = new BinaryTree();
 
 
@@ -83,6 +84,7 @@ namespace RecursiveSearchCS
             this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
             this.Browse = new System.Windows.Forms.Button();
             this.deleteBtn = new System.Windows.Forms.Button();
+            this.undoBtn = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // btnSearch
@@ -115,7 +117,7 @@ namespace RecursiveSearchCS
             this.cboDirectory.DropDownWidth = 112;
             this.cboDirectory.Location = new System.Drawing.Point(74, 243);
             this.cboDirectory.Name = "cboDirectory";
-            this.cboDirectory.Size = new System.Drawing.Size(421, 21);
+            this.cboDirectory.Size = new System.Drawing.Size(353, 21);
             this.cboDirectory.TabIndex = 2;
             this.cboDirectory.Text = "ComboBox1";
             // 
@@ -130,10 +132,10 @@ namespace RecursiveSearchCS
             this.ProcessBtn.UseVisualStyleBackColor = true;
             this.ProcessBtn.Click += new System.EventHandler(this.ProcessBtn_Click);
             // 
-            // progressBar1
+            // mainProgressBar
             // 
             this.mainProgressBar.Location = new System.Drawing.Point(174, 268);
-            this.mainProgressBar.Name = "progressBar1";
+            this.mainProgressBar.Name = "mainProgressBar";
             this.mainProgressBar.Size = new System.Drawing.Size(517, 23);
             this.mainProgressBar.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
             this.mainProgressBar.TabIndex = 7;
@@ -158,7 +160,7 @@ namespace RecursiveSearchCS
             // 
             // Browse
             // 
-            this.Browse.Location = new System.Drawing.Point(501, 241);
+            this.Browse.Location = new System.Drawing.Point(433, 241);
             this.Browse.Name = "Browse";
             this.Browse.Size = new System.Drawing.Size(75, 23);
             this.Browse.TabIndex = 10;
@@ -169,7 +171,7 @@ namespace RecursiveSearchCS
             // deleteBtn
             // 
             this.deleteBtn.Enabled = false;
-            this.deleteBtn.Location = new System.Drawing.Point(582, 241);
+            this.deleteBtn.Location = new System.Drawing.Point(514, 241);
             this.deleteBtn.Name = "deleteBtn";
             this.deleteBtn.Size = new System.Drawing.Size(109, 23);
             this.deleteBtn.TabIndex = 11;
@@ -177,10 +179,21 @@ namespace RecursiveSearchCS
             this.deleteBtn.UseVisualStyleBackColor = true;
             this.deleteBtn.Click += new System.EventHandler(this.deleteBtn_Click);
             // 
+            // undoBtn
+            // 
+            this.undoBtn.Location = new System.Drawing.Point(630, 241);
+            this.undoBtn.Name = "undoBtn";
+            this.undoBtn.Size = new System.Drawing.Size(61, 23);
+            this.undoBtn.TabIndex = 12;
+            this.undoBtn.Text = "Undo";
+            this.undoBtn.UseVisualStyleBackColor = true;
+            this.undoBtn.Click += new System.EventHandler(this.undoBtn_Click);
+            // 
             // DuplicationFinderForm
             // 
             this.AutoScaleBaseSize = new System.Drawing.Size(5, 13);
             this.ClientSize = new System.Drawing.Size(705, 332);
+            this.Controls.Add(this.undoBtn);
             this.Controls.Add(this.deleteBtn);
             this.Controls.Add(this.Browse);
             this.Controls.Add(this.sizeLabel);
@@ -342,6 +355,42 @@ namespace RecursiveSearchCS
             cboDirectory.Text = folderBrowserDialog1.SelectedPath;
 
         }
+        private List<string> generateUndoArray()
+        {
+            List<string> undoArray = new List<string>();
+            
+            for (int i = bst.getDuplicates().getCount() - 1; i >= 0; i--)
+            {
+                DuplicateInfo.duplicate curDuplicate = bst.getDuplicates().getDuplicateList()[i];
+                string curOutput = curDuplicate.duplicateA.GetFileName() + ";" + curDuplicate.duplicateB.GetFileName() + 
+                    ";" + curDuplicate.type.ToString();
+                undoArray.Add(curOutput);
+            }
+            return undoArray;
+        }
+
+        private void writeLog(List<string> undoArray)
+        {
+            string[] output = undoArray.ToArray();
+            System.IO.File.WriteAllLines(cboDirectory.Text + "\\duplicateLog.txt", output);
+        }
+
+        private void undo()
+        {
+            string[] input = System.IO.File.ReadAllLines(cboDirectory.Text + "\\duplicateLog.txt");
+            mainProgressBar.Maximum = input.Length;
+            mainProgressBar.Value = 0;
+
+            foreach (string line in input)
+            {
+                string[] info = line.Split(';');
+                processingLabel.Text = "Restoring file: " + info[1];
+                File.Copy(info[0], info[1]);
+                Application.DoEvents();
+                mainProgressBar.Increment(1);
+            }
+
+        }
 
         // code used from: http://stackoverflow.com/questions/3282418/send-a-file-to-the-recycle-bin
         private void deleteBtn_Click(object sender, EventArgs e)
@@ -356,16 +405,22 @@ namespace RecursiveSearchCS
                     processingLabel.Text = "Deleting file: " + filename;
                     Application.DoEvents();
                     var shf = new SHFILEOPSTRUCT();
+                    shf.pTo = null;
                     shf.wFunc = FO_DELETE;
-                    shf.fFlags = FOF_ALLOWUNDO;// | FOF_NOCONFIRMATION;
-                    shf.pFrom = filename;
-                    SHFileOperation(ref shf);
+                    shf.fFlags = FOF_ALLOWUNDO;// | FOF_NOCONFIRMATION; does not seem to do anything
+                    shf.pFrom = filename + "\0" + "\0";// requires double null termination or else errors will occur.
+                    int value = SHFileOperation(ref shf);
+                    if (value != 0)
+                    {
+                        //MessageBox.Show(filename + " error code: " + value);
+                    }
                     mainProgressBar.Increment(1);
                 }
             }
             
             deleteBtn.Enabled = false;
             lstFilesFound.Items.Clear();
+            writeLog(generateUndoArray());
         }
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto, Pack = 1)]
@@ -388,7 +443,12 @@ namespace RecursiveSearchCS
 
         public const int FO_DELETE = 3;
         public const int FOF_ALLOWUNDO = 0x40;
-        public const int FOF_NOCONFIRMATION = 0x10; // Don't prompt the user
+        public const int FOF_NOCONFIRMATION = 0x10;
+
+        private void undoBtn_Click(object sender, EventArgs e)
+        {
+            undo();
+        } 
     
     }
 }

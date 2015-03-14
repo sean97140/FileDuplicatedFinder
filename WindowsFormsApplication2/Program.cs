@@ -167,6 +167,7 @@ namespace RecursiveSearchCS
             // 
             // deleteBtn
             // 
+            this.deleteBtn.Enabled = false;
             this.deleteBtn.Location = new System.Drawing.Point(582, 241);
             this.deleteBtn.Name = "deleteBtn";
             this.deleteBtn.Size = new System.Drawing.Size(109, 23);
@@ -323,6 +324,7 @@ namespace RecursiveSearchCS
             fileList.Clear();
             bst.Clear();
             progressBar1.Value = 0;
+            deleteBtn.Enabled = true;
         }
 
         private void Browse_Click(object sender, EventArgs e)
@@ -353,9 +355,8 @@ namespace RecursiveSearchCS
             {
             
             }
-
-            
-            
+            deleteBtn.Enabled = false;
+            lstFilesFound.Items.Clear();
         }
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto, Pack = 1)]

@@ -28,7 +28,10 @@ namespace RecursiveSearchCS
     public class BinaryTree
     {
         private BinaryTreeNode root;
-        public ArrayList duplicates = new ArrayList();
+        public ArrayList duplicatesMessage = new ArrayList();
+        public ArrayList duplicateA = new ArrayList();
+        public ArrayList duplicateB = new ArrayList();
+
         public double totalDuplicateSize;
         public int duplicateCount = 0;
 
@@ -40,6 +43,10 @@ namespace RecursiveSearchCS
         public virtual void Clear()
         {
             root = null;
+            duplicateCount = 0;
+            duplicatesMessage.Clear();
+            duplicateA.Clear();
+            duplicateB.Clear();
         }
 
         public BinaryTreeNode Root
@@ -67,7 +74,9 @@ namespace RecursiveSearchCS
                 if (result == 0)
                 {
                     duplicateCount++;
-                    duplicates.Add(current.Value.ToString() + " copy of: " + data.ToString());
+                    duplicateA.Add(current.Value.ToString());
+                    duplicateB.Add(data.ToString());
+                    duplicatesMessage.Add(current.Value.ToString() + " copy of: " + data.ToString());
                     totalDuplicateSize += new FileInfo(data.ToString()).Length / 1024.0;
                     return;
                 }

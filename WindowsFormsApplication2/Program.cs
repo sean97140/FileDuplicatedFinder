@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using System.Data;
 using System.IO;
 using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 
 
 //Modified example code from: http://support.microsoft.com/en-us/kb/303974
@@ -31,7 +32,9 @@ namespace RecursiveSearchCS
         private Label sizeLabel;
         private FolderBrowserDialog folderBrowserDialog1;
         private Button Browse;
+        private Button deleteBtn;
         long totalSize;
+        BinaryTree bst = new BinaryTree();
 
 
         public DuplicationFinderForm()
@@ -78,6 +81,7 @@ namespace RecursiveSearchCS
             this.sizeLabel = new System.Windows.Forms.Label();
             this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
             this.Browse = new System.Windows.Forms.Button();
+            this.deleteBtn = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // btnSearch
@@ -110,7 +114,7 @@ namespace RecursiveSearchCS
             this.cboDirectory.DropDownWidth = 112;
             this.cboDirectory.Location = new System.Drawing.Point(74, 243);
             this.cboDirectory.Name = "cboDirectory";
-            this.cboDirectory.Size = new System.Drawing.Size(536, 21);
+            this.cboDirectory.Size = new System.Drawing.Size(421, 21);
             this.cboDirectory.TabIndex = 2;
             this.cboDirectory.Text = "ComboBox1";
             // 
@@ -153,7 +157,7 @@ namespace RecursiveSearchCS
             // 
             // Browse
             // 
-            this.Browse.Location = new System.Drawing.Point(616, 241);
+            this.Browse.Location = new System.Drawing.Point(501, 241);
             this.Browse.Name = "Browse";
             this.Browse.Size = new System.Drawing.Size(75, 23);
             this.Browse.TabIndex = 10;
@@ -161,10 +165,21 @@ namespace RecursiveSearchCS
             this.Browse.UseVisualStyleBackColor = true;
             this.Browse.Click += new System.EventHandler(this.Browse_Click);
             // 
-            // Form1
+            // deleteBtn
+            // 
+            this.deleteBtn.Location = new System.Drawing.Point(582, 241);
+            this.deleteBtn.Name = "deleteBtn";
+            this.deleteBtn.Size = new System.Drawing.Size(109, 23);
+            this.deleteBtn.TabIndex = 11;
+            this.deleteBtn.Text = "Delete Duplicates";
+            this.deleteBtn.UseVisualStyleBackColor = true;
+            this.deleteBtn.Click += new System.EventHandler(this.deleteBtn_Click);
+            // 
+            // DuplicationFinderForm
             // 
             this.AutoScaleBaseSize = new System.Drawing.Size(5, 13);
-            this.ClientSize = new System.Drawing.Size(704, 332);
+            this.ClientSize = new System.Drawing.Size(705, 332);
+            this.Controls.Add(this.deleteBtn);
             this.Controls.Add(this.Browse);
             this.Controls.Add(this.sizeLabel);
             this.Controls.Add(this.processingLabel);
@@ -174,7 +189,7 @@ namespace RecursiveSearchCS
             this.Controls.Add(this.lblDirectory);
             this.Controls.Add(this.lstFilesFound);
             this.Controls.Add(this.cboDirectory);
-            this.Name = "Form1";
+            this.Name = "DuplicationFinderForm";
             this.Text = "Duplicate File Finder";
             this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
@@ -195,6 +210,7 @@ namespace RecursiveSearchCS
         private void btnSearch_Click(object sender, System.EventArgs e)
         {
             lstFilesFound.Items.Clear();
+            fileList.Clear();
             cboDirectory.Enabled = false;
             btnSearch.Text = "Searching...";
             this.Cursor = Cursors.WaitCursor;
@@ -267,7 +283,7 @@ namespace RecursiveSearchCS
             this.Cursor = Cursors.WaitCursor;
             Application.DoEvents();
             progressBar1.Maximum = (int)totalSize;
-            BinaryTree bst = new BinaryTree();
+            
 
             foreach (string filename in fileList)
             {
@@ -294,7 +310,7 @@ namespace RecursiveSearchCS
                     }
                 }
             }
-            foreach (string dupliacte in bst.duplicates)
+            foreach (string dupliacte in bst.duplicatesMessage)
             {
                 lstFilesFound.Items.Add(dupliacte);
             }
@@ -318,5 +334,51 @@ namespace RecursiveSearchCS
 
         }
 
+        // code used from: http://stackoverflow.com/questions/3282418/send-a-file-to-the-recycle-bin
+        private void deleteBtn_Click(object sender, EventArgs e)
+        {
+            var result = MessageBox.Show("Are you sure you want to send every second file to the Recycling Bin?", "Confirmation", MessageBoxButtons.YesNo);
+            if (result == DialogResult.Yes)
+            {
+                foreach (string filename in bst.duplicateB)
+                {
+                    var shf = new SHFILEOPSTRUCT();
+                    shf.wFunc = FO_DELETE;
+                    shf.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION;
+                    shf.pFrom = @filename;
+                    SHFileOperation(ref shf);
+                }
+            }
+            else if (result == DialogResult.No)
+            {
+            
+            }
+
+            
+            
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto, Pack = 1)]
+        public struct SHFILEOPSTRUCT
+        {
+            public IntPtr hwnd;
+            [MarshalAs(UnmanagedType.U4)]
+            public int wFunc;
+            public string pFrom;
+            public string pTo;
+            public short fFlags;
+            [MarshalAs(UnmanagedType.Bool)]
+            public bool fAnyOperationsAborted;
+            public IntPtr hNameMappings;
+            public string lpszProgressTitle;
+        }
+
+        [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+        public static extern int SHFileOperation(ref SHFILEOPSTRUCT FileOp);
+
+        public const int FO_DELETE = 3;
+        public const int FOF_ALLOWUNDO = 0x40;
+        public const int FOF_NOCONFIRMATION = 0x10; // Don't prompt the user
+    
     }
 }

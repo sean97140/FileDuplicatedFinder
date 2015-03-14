@@ -344,6 +344,8 @@ namespace RecursiveSearchCS
             {
                 foreach (string filename in bst.duplicateB)
                 {
+                    processingLabel.Text = "Deleting file: " + filename;
+                    Application.DoEvents();
                     var shf = new SHFILEOPSTRUCT();
                     shf.wFunc = FO_DELETE;
                     shf.fFlags = FOF_ALLOWUNDO;// | FOF_NOCONFIRMATION;

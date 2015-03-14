@@ -7,6 +7,7 @@ using System.Data;
 using System.IO;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 
 
 //Modified example code from: http://support.microsoft.com/en-us/kb/303974
@@ -26,7 +27,7 @@ namespace RecursiveSearchCS
         /// </summary>
         private System.ComponentModel.Container components = null;
         private Button ProcessBtn;
-        private ProgressBar progressBar1;
+        private ProgressBar mainProgressBar;
         ArrayList fileList = new ArrayList();
         private Label processingLabel;
         private Label sizeLabel;
@@ -76,7 +77,7 @@ namespace RecursiveSearchCS
             this.lstFilesFound = new System.Windows.Forms.ListBox();
             this.cboDirectory = new System.Windows.Forms.ComboBox();
             this.ProcessBtn = new System.Windows.Forms.Button();
-            this.progressBar1 = new System.Windows.Forms.ProgressBar();
+            this.mainProgressBar = new System.Windows.Forms.ProgressBar();
             this.processingLabel = new System.Windows.Forms.Label();
             this.sizeLabel = new System.Windows.Forms.Label();
             this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
@@ -131,11 +132,11 @@ namespace RecursiveSearchCS
             // 
             // progressBar1
             // 
-            this.progressBar1.Location = new System.Drawing.Point(174, 268);
-            this.progressBar1.Name = "progressBar1";
-            this.progressBar1.Size = new System.Drawing.Size(517, 23);
-            this.progressBar1.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
-            this.progressBar1.TabIndex = 7;
+            this.mainProgressBar.Location = new System.Drawing.Point(174, 268);
+            this.mainProgressBar.Name = "progressBar1";
+            this.mainProgressBar.Size = new System.Drawing.Size(517, 23);
+            this.mainProgressBar.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
+            this.mainProgressBar.TabIndex = 7;
             // 
             // processingLabel
             // 
@@ -184,7 +185,7 @@ namespace RecursiveSearchCS
             this.Controls.Add(this.Browse);
             this.Controls.Add(this.sizeLabel);
             this.Controls.Add(this.processingLabel);
-            this.Controls.Add(this.progressBar1);
+            this.Controls.Add(this.mainProgressBar);
             this.Controls.Add(this.ProcessBtn);
             this.Controls.Add(this.btnSearch);
             this.Controls.Add(this.lblDirectory);
@@ -284,7 +285,7 @@ namespace RecursiveSearchCS
             ProcessBtn.Text = "Processing...";
             this.Cursor = Cursors.WaitCursor;
             Application.DoEvents();
-            progressBar1.Maximum = (int)totalSize;
+            mainProgressBar.Maximum = (int)totalSize;
             
 
             foreach (string filename in fileList)
@@ -296,14 +297,16 @@ namespace RecursiveSearchCS
                     {
                         using (var stream = File.OpenRead(filename))
                         {
-                            HashInfo temp = new HashInfo();
+                            HashInfo currentHash = new HashInfo();
                             processingLabel.Text = "Currently processing file: " + filename;
-                            sizeLabel.Text = "Size: " + Math.Round(new FileInfo(filename).Length / 1048576.0, 2).ToString() + " MB  Total size of duplicates found: " + Math.Round(bst.totalDuplicateSize / 1024, 2) + " MB  Duplicates Found: " + bst.duplicateCount;
+                            sizeLabel.Text = "Size: " + Math.Round(new FileInfo(filename).Length / 1048576.0, 2).ToString() + 
+                                " MB  Total size of duplicates found: " + Math.Round(bst.getDuplicates().getTotalSize() / 1024, 2) + 
+                                " MB  Duplicates Found: " + bst.getDuplicates().getCount();
                             Application.DoEvents();
-                            temp.hash = BitConverter.ToString(md5.ComputeHash(stream)).Replace("-", "").ToLower();
-                            temp.filename = filename;
-                            bst.Add(temp);
-                            progressBar1.Increment((int)new FileInfo(filename).Length / 8192);
+                            currentHash.hash = BitConverter.ToString(md5.ComputeHash(stream)).Replace("-", "").ToLower();
+                            currentHash.filename = filename;
+                            bst.Add(currentHash);
+                            mainProgressBar.Increment((int)new FileInfo(filename).Length / 8192);
                         }
                     }
                     catch (System.Exception ex)
@@ -312,9 +315,14 @@ namespace RecursiveSearchCS
                     }
                 }
             }
-            foreach (string dupliacte in bst.duplicatesMessage)
+
+            List<DuplicateInfo.duplicate> duplicateList = bst.getDuplicates().getDuplicateList();
+
+           
+            for (int i = 0; i < bst.getDuplicates().getDuplicateList().Count; i++)
             {
-                lstFilesFound.Items.Add(dupliacte);
+                DuplicateInfo.duplicate aDuplicate = bst.getDuplicates().getDuplicateList()[i];
+                lstFilesFound.Items.Add(aDuplicate.message);
             }
 
             ProcessBtn.Text = "Process";
@@ -322,7 +330,7 @@ namespace RecursiveSearchCS
             cboDirectory.Enabled = true;
             ProcessBtn.Enabled = false;
             btnSearch.Enabled = true;
-            progressBar1.Value = 0;
+            mainProgressBar.Value = 0;
             deleteBtn.Enabled = true;
         }
 
@@ -338,12 +346,13 @@ namespace RecursiveSearchCS
         // code used from: http://stackoverflow.com/questions/3282418/send-a-file-to-the-recycle-bin
         private void deleteBtn_Click(object sender, EventArgs e)
         {
-            progressBar1.Maximum = bst.duplicateB.Count;
+            mainProgressBar.Maximum = bst.getDuplicates().getCount();
             var result = MessageBox.Show("Are you sure you want to send every second file to the Recycling Bin?", "Confirmation", MessageBoxButtons.YesNo);
             if (result == DialogResult.Yes)
             {
-                foreach (string filename in bst.duplicateB)
+                for (int i = 0; i < bst.getDuplicates().getCount(); ++i)
                 {
+                    string filename = bst.getDuplicates().getDuplicateList()[i].duplicateB.GetFileName();
                     processingLabel.Text = "Deleting file: " + filename;
                     Application.DoEvents();
                     var shf = new SHFILEOPSTRUCT();
@@ -351,13 +360,10 @@ namespace RecursiveSearchCS
                     shf.fFlags = FOF_ALLOWUNDO;// | FOF_NOCONFIRMATION;
                     shf.pFrom = filename;
                     SHFileOperation(ref shf);
-                    progressBar1.Increment(1);
+                    mainProgressBar.Increment(1);
                 }
             }
-            else if (result == DialogResult.No)
-            {
             
-            }
             deleteBtn.Enabled = false;
             lstFilesFound.Items.Clear();
         }

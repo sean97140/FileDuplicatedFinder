@@ -5,17 +5,101 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 //code modified from https://msdn.microsoft.com/en-us/library/ms379572%28v=vs.80%29.aspx
 
 namespace RecursiveSearchCS
 {
+    
+    public class DuplicateInfo
+    {
+        private List<duplicate> duplicates;
+        private double totalDuplicateSize;
+        private int duplicateCount;
+        public enum duplicateType { copy, duplicate };
+        
+        public struct duplicate
+        {
+            public HashInfo duplicateA;
+            public HashInfo duplicateB;
+            public String message;
+            public string hashCode;
+            public duplicateType type;
+        }
+
+        public DuplicateInfo()
+        {
+            duplicates = new List<duplicate>();
+            totalDuplicateSize = 0.0;
+            duplicateCount = 0;
+        }
+
+        public double getTotalSize ()
+        {
+            return totalDuplicateSize;
+        }
+
+        public int getCount()
+        {
+            return duplicateCount;
+        }
+        
+        public void clear ()
+        {
+            duplicates.Clear();
+            totalDuplicateSize = 0;
+            duplicateCount = 0;
+        }
+
+        public List<duplicate> getDuplicateList()
+        {
+            return duplicates;
+        }
+
+        public void addDuplicate(HashInfo data, BinaryTreeNode current)
+        {
+            duplicate aDuplicate = new duplicate();
+
+            if (Regex.IsMatch(current.Value.GetFileName(), @".\(\d\)."))
+            {
+                aDuplicate.duplicateA = data;
+                aDuplicate.duplicateB = current.Value;
+                aDuplicate.message = data.GetFileName() + " has a copy: " + current.Value.GetFileName();
+                aDuplicate.type = duplicateType.copy;
+
+                //swap node value so the orig file is the one in the bst not the copy "filename (#).ext"
+                current.swapNodeValue(data);
+            }
+            else if ((Regex.IsMatch(data.GetFileName(), @".\(\d\).")))
+            {
+                aDuplicate.duplicateA = current.Value;
+                aDuplicate.duplicateB = data;
+                aDuplicate.message = current.Value.GetFileName() + " has a copy: " + data.GetFileName();
+                aDuplicate.type = duplicateType.copy;
+            }
+            else
+            {
+                aDuplicate.duplicateA = current.Value;
+                aDuplicate.duplicateB = data;
+                aDuplicate.message = current.Value.GetFileName() + " has a duplicate: " + data.GetFileName();
+                aDuplicate.type = duplicateType.duplicate;
+            }
+
+            aDuplicate.hashCode = data.GetHashString();
+            duplicates.Add(aDuplicate);
+            duplicateCount++;
+            totalDuplicateSize += new FileInfo(data.GetFileName()).Length / 1024.0;
+        }
+
+    }
+    
     public class HashInfo 
     {
         public string hash;
         public string filename;
-        public override string ToString() {
+        public string GetFileName() {
             return filename;
         }
         public string GetHashString()
@@ -23,18 +107,17 @@ namespace RecursiveSearchCS
             return hash;
         }
     }
-    
+  
     
     public class BinaryTree
     {
         private BinaryTreeNode root;
-        public ArrayList duplicatesMessage = new ArrayList();
-        public ArrayList duplicateA = new ArrayList();
-        public ArrayList duplicateB = new ArrayList();
+        private DuplicateInfo duplicates = new DuplicateInfo();
 
-        public double totalDuplicateSize;
-        public int duplicateCount = 0;
-
+        public DuplicateInfo getDuplicates()
+        {
+            return duplicates;
+        }
         public BinaryTree()
         {
             root = null;
@@ -43,25 +126,9 @@ namespace RecursiveSearchCS
         public virtual void Clear()
         {
             root = null;
-            duplicateCount = 0;
-            duplicatesMessage.Clear();
-            duplicateA.Clear();
-            duplicateB.Clear();
+            duplicates.clear();
         }
-
-        public BinaryTreeNode Root
-        {
-            get
-            {
-                return root;
-            }
-            set
-            {
-                root = value;
-            }
-        }
-
-    
+       
         public virtual void Add(HashInfo data)
         {
             BinaryTreeNode n = new BinaryTreeNode(data);
@@ -73,16 +140,11 @@ namespace RecursiveSearchCS
                 result = String.Compare(current.Value.GetHashString(), data.GetHashString());
                 if (result == 0)
                 {
-                    duplicateCount++;
-                    duplicateA.Add(current.Value.ToString());
-                    duplicateB.Add(data.ToString());
-                    duplicatesMessage.Add(current.Value.ToString() + " copy of: " + data.ToString());
-                    totalDuplicateSize += new FileInfo(data.ToString()).Length / 1024.0;
+                    duplicates.addDuplicate(data, current);
                     return;
                 }
                 else if (result > 0)
                 {
-
                     parent = current;
                     current = current.Left;
                 }
@@ -109,6 +171,10 @@ namespace RecursiveSearchCS
     public class BinaryTreeNode : Node
     {
         public BinaryTreeNode(HashInfo data) : base(data, null) { }
+        
+        public void swapNodeValue(HashInfo data){
+            this.Value = data;
+        }
 
         public BinaryTreeNode Left
         {

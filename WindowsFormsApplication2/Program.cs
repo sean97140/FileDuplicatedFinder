@@ -210,8 +210,9 @@ namespace RecursiveSearchCS
 
         private void btnSearch_Click(object sender, System.EventArgs e)
         {
-            lstFilesFound.Items.Clear();
             fileList.Clear();
+            bst.Clear();
+            lstFilesFound.Items.Clear();
             cboDirectory.Enabled = false;
             btnSearch.Text = "Searching...";
             this.Cursor = Cursors.WaitCursor;
@@ -321,8 +322,6 @@ namespace RecursiveSearchCS
             cboDirectory.Enabled = true;
             ProcessBtn.Enabled = false;
             btnSearch.Enabled = true;
-            fileList.Clear();
-            bst.Clear();
             progressBar1.Value = 0;
             deleteBtn.Enabled = true;
         }
@@ -339,6 +338,7 @@ namespace RecursiveSearchCS
         // code used from: http://stackoverflow.com/questions/3282418/send-a-file-to-the-recycle-bin
         private void deleteBtn_Click(object sender, EventArgs e)
         {
+            progressBar1.Maximum = bst.duplicateB.Count;
             var result = MessageBox.Show("Are you sure you want to send every second file to the Recycling Bin?", "Confirmation", MessageBoxButtons.YesNo);
             if (result == DialogResult.Yes)
             {
@@ -346,9 +346,10 @@ namespace RecursiveSearchCS
                 {
                     var shf = new SHFILEOPSTRUCT();
                     shf.wFunc = FO_DELETE;
-                    shf.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION;
-                    shf.pFrom = @filename;
+                    shf.fFlags = FOF_ALLOWUNDO;// | FOF_NOCONFIRMATION;
+                    shf.pFrom = filename;
                     SHFileOperation(ref shf);
+                    progressBar1.Increment(1);
                 }
             }
             else if (result == DialogResult.No)

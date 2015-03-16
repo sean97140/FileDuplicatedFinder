@@ -316,8 +316,8 @@ namespace RecursiveSearchCS
                                 " MB  Total size of duplicates found: " + Math.Round(bst.getDuplicates().getTotalSize() / 1024, 2) + 
                                 " MB  Duplicates Found: " + bst.getDuplicates().getCount();
                             Application.DoEvents();
-                            currentHash.hash = BitConverter.ToString(md5.ComputeHash(stream)).Replace("-", "").ToLower();
-                            currentHash.filename = filename;
+                            currentHash.setHashString(BitConverter.ToString(md5.ComputeHash(stream)).Replace("-", "").ToLower());
+                            currentHash.SetFileName(filename);
                             bst.Add(currentHash);
                             mainProgressBar.Increment((int)new FileInfo(filename).Length / 8192);
                         }

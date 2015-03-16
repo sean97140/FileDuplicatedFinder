@@ -62,7 +62,7 @@ namespace RecursiveSearchCS
         {
             duplicate aDuplicate = new duplicate();
 
-            if (Regex.IsMatch(current.Value.GetFileName(), @".\(\d\)."))
+            if (Regex.IsMatch(current.Value.GetFileName(), @".(\(\d\))|(Copy)."))
             {
                 aDuplicate.duplicateA = data;
                 aDuplicate.duplicateB = current.Value;
@@ -72,7 +72,7 @@ namespace RecursiveSearchCS
                 //swap node value so the orig file is the one in the bst not the copy "filename (#).ext"
                 current.swapNodeValue(data);
             }
-            else if ((Regex.IsMatch(data.GetFileName(), @".\(\d\).")))
+            else if ((Regex.IsMatch(data.GetFileName(), @".(\(\d\))|(Copy).")))
             {
                 aDuplicate.duplicateA = current.Value;
                 aDuplicate.duplicateB = data;
@@ -97,8 +97,19 @@ namespace RecursiveSearchCS
     
     public class HashInfo 
     {
-        public string hash;
-        public string filename;
+        private string hash;
+        private string filename;
+
+        public void SetFileName(string filename)
+        {
+            this.filename = filename;
+        }
+
+        public void setHashString(string hash)
+        {
+            this.hash = hash;
+        }
+
         public string GetFileName() {
             return filename;
         }

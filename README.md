@@ -12,6 +12,9 @@ The undo option will read undo information from a log file that is generated in 
 It will then replace every copy that was deleted by copying and renaming files as necessary.
 
 Future work:
+
 Error handling - file access issues not handled right now
+
 Deletion optoins - delete vs send to recycle bin and duplicates/copies
+
 Restore option - duplicates/copies or both.
